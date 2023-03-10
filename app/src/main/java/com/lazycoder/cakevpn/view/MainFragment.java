@@ -52,6 +52,14 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
 
     private FragmentMainBinding binding;
 
+    String connect = "مادرجانم ین دکمه رو بزن که وسل شه";
+    String connected = "مادرجانم وصل شود";
+    String connecting = "مادرجانم درحاله وصل شودنه";
+    String disconnect = "مادرجانم ین دکمه رو بزن که قطع بشه";
+    String disconnected = "مادرجانم قطع شد";
+    String noInternetConnection = "مادرجانم اینترنت قته، لطفآ به ون وسل شو";
+
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -72,7 +80,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         server = preference.getServer();
 
         // Update current selected server icon
-        updateCurrentServerIcon(server.getFlagUrl());
+//        updateCurrentServerIcon(server.getFlagUrl());
 
         connection = new CheckInternetConnection();
     }
@@ -277,26 +285,27 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     public void status(String status) {
 
         if (status.equals("connect")) {
-            binding.vpnBtn.setText(getContext().getString(R.string.connect));
+            binding.vpnBtn.setText(connect);
         } else if (status.equals("connecting")) {
-            binding.vpnBtn.setText(getContext().getString(R.string.connecting));
+            binding.vpnBtn.setText(connecting);
         } else if (status.equals("connected")) {
 
-            binding.vpnBtn.setText(getContext().getString(R.string.disconnect));
+            binding.vpnBtn.setText(disconnect);
 
         } else if (status.equals("tryDifferentServer")) {
-
+            //TODO: Should automatically move to the next server
             binding.vpnBtn.setBackgroundResource(R.drawable.button_connected);
             binding.vpnBtn.setText("Try Different\nServer");
         } else if (status.equals("loading")) {
             binding.vpnBtn.setBackgroundResource(R.drawable.button);
-            binding.vpnBtn.setText("Loading Server..");
+            binding.vpnBtn.setText(connecting);
         } else if (status.equals("invalidDevice")) {
+            //TODO: Should automatically move to the next server
             binding.vpnBtn.setBackgroundResource(R.drawable.button_connected);
             binding.vpnBtn.setText("Invalid Device");
         } else if (status.equals("authenticationCheck")) {
             binding.vpnBtn.setBackgroundResource(R.drawable.button_connecting);
-            binding.vpnBtn.setText("Authentication \n Checking...");
+            binding.vpnBtn.setText(connecting);
         }
 
     }
@@ -354,15 +363,15 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
     }
 
-    /**
-     * VPN server country icon change
-     * @param serverIcon: icon URL
-     */
-    public void updateCurrentServerIcon(String serverIcon) {
-        Glide.with(getContext())
-                .load(serverIcon)
-                .into(binding.selectedServerIcon);
-    }
+//    /**
+//     * VPN server country icon change
+//     * @param serverIcon: icon URL
+//     */
+//    public void updateCurrentServerIcon(String serverIcon) {
+//        Glide.with(getContext())
+//                .load(serverIcon)
+//                .into(binding.selectedServerIcon);
+//    }
 
     /**
      * Change server when user select new server
@@ -371,7 +380,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     @Override
     public void newServer(Server server) {
         this.server = server;
-        updateCurrentServerIcon(server.getFlagUrl());
+//        updateCurrentServerIcon(server.getFlagUrl());
 
         // Stop previous connection
         if (vpnStart) {
