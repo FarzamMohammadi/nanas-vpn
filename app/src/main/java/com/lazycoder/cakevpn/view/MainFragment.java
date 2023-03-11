@@ -29,9 +29,14 @@ import com.lazycoder.cakevpn.interfaces.ChangeServer;
 import com.lazycoder.cakevpn.model.Server;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 
 import de.blinkt.openvpn.OpenVpnApi;
 import de.blinkt.openvpn.core.OpenVPNService;
@@ -43,6 +48,7 @@ import static android.app.Activity.RESULT_OK;
 public class MainFragment extends Fragment implements View.OnClickListener, ChangeServer {
 
     private Server server;
+    private ArrayList<Server> servers;
     private CheckInternetConnection connection;
 
     private OpenVPNThread vpnThread = new OpenVPNThread();
@@ -59,11 +65,13 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     String disconnected = "مادرجانم قطع شد";
     String noInternetConnection = "مادرجانم اینترنت قته، لطفآ به ون وسل شو";
 
+    private static WeakReference<MainActivity> mActivityRef;
+    public static void updateActivity(MainActivity activity) {
+        mActivityRef = new WeakReference<MainActivity>(activity);
+    }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = DataBindingUtil.inflate(inflater, R.layout.fragment_main, container, false);
 
         View view = binding.getRoot();
@@ -77,10 +85,9 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
      */
     private void initializeAll() {
         preference = new SharedPreference(getContext());
-        server = preference.getServer();
-
-        // Update current selected server icon
-//        updateCurrentServerIcon(server.getFlagUrl());
+        MainActivity mainAcitivity = mActivityRef.get();
+        servers = mainAcitivity.getServers();
+        server = servers.get(0);
 
         connection = new CheckInternetConnection();
     }
@@ -147,11 +154,10 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
 
                 if (intent != null) {
                     startActivityForResult(intent, 1);
-                } else startVpn();//have already permission
+                } else startVpn();
 
                 // Update confection status
                 status("connecting");
-
             } else {
 
                 // No internet connection available
@@ -218,10 +224,8 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
      */
     private void startVpn() {
         try {
-            // .ovpn file
-            InputStream conf = getActivity().getAssets().open(server.getOvpn());
-            InputStreamReader isr = new InputStreamReader(conf);
-            BufferedReader br = new BufferedReader(isr);
+            File ovpnFile = new File(server.getOvpn());
+            BufferedReader br = new BufferedReader(new FileReader(ovpnFile));
             String config = "";
             String line;
 
@@ -311,37 +315,6 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     }
 
     /**
-     * Receive broadcast message
-     */
-    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                setStatus(intent.getStringExtra("state"));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            try {
-
-                String duration = intent.getStringExtra("duration");
-                String lastPacketReceive = intent.getStringExtra("lastPacketReceive");
-                String byteIn = intent.getStringExtra("byteIn");
-                String byteOut = intent.getStringExtra("byteOut");
-
-                if (duration == null) duration = "00:00:00";
-                if (lastPacketReceive == null) lastPacketReceive = "0";
-                if (byteIn == null) byteIn = " ";
-                if (byteOut == null) byteOut = " ";
-                updateConnectionStatus(duration, lastPacketReceive, byteIn, byteOut);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-        }
-    };
-
-    /**
      * Update status UI
      * @param duration: running time
      * @param lastPacketReceive: last packet receive time
@@ -363,16 +336,6 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
     }
 
-//    /**
-//     * VPN server country icon change
-//     * @param serverIcon: icon URL
-//     */
-//    public void updateCurrentServerIcon(String serverIcon) {
-//        Glide.with(getContext())
-//                .load(serverIcon)
-//                .into(binding.selectedServerIcon);
-//    }
-
     /**
      * Change server when user select new server
      * @param server ovpn server details
@@ -380,7 +343,6 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     @Override
     public void newServer(Server server) {
         this.server = server;
-//        updateCurrentServerIcon(server.getFlagUrl());
 
         // Stop previous connection
         if (vpnStart) {
@@ -392,18 +354,10 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
 
     @Override
     public void onResume() {
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(broadcastReceiver, new IntentFilter("connectionState"));
-
         if (server == null) {
             server = preference.getServer();
         }
         super.onResume();
-    }
-
-    @Override
-    public void onPause() {
-        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(broadcastReceiver);
-        super.onPause();
     }
 
     /**

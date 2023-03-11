@@ -28,18 +28,25 @@ import java.util.ArrayList;
 import com.lazycoder.cakevpn.Utils;
 
 
-public class MainActivity extends AppCompatActivity implements NavItemClickListener {
+public class MainActivity extends AppCompatActivity {
     private FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
     private Fragment fragment;
     private RecyclerView serverListRv;
-    private ArrayList<Server> serverLists;
     private ServerListRVAdapter serverListRVAdapter;
     private DrawerLayout drawer;
     private ChangeServer changeServer;
 
     public static final String TAG = "CakeVPN";
     public static File dir = new File(new File(Environment.getExternalStorageDirectory(), "ovpn-files"), "");
-    String[] ovpnFileNames = {"1.ovpn", "2.ovpn", "3.ovpn", "4.ovpn", "5.ovpn", "6.ovpn", "7.ovpn", "8.ovpn", "9.ovpn", "10.ovpn"};
+    String[] ovpnFileNames = {"1.ovpn", "2.ovpn"};
+
+    private ArrayList<Server> servers; // private = restricted access
+    public ArrayList<Server> getServers() {
+        return servers;
+    }
+    public void setServers(ArrayList<Server> servers) {
+        this.servers = servers;
+    }
 
     public void createDir(){
         if (!dir.exists()){
@@ -70,9 +77,9 @@ public class MainActivity extends AppCompatActivity implements NavItemClickListe
 
         getPermissions();
 
-        initializeAll();
-
         downloadVpnConfigurationFiles();
+
+        initStart();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -82,68 +89,35 @@ public class MainActivity extends AppCompatActivity implements NavItemClickListe
         transaction.add(R.id.container, fragment);
         transaction.commit();
 
-        // Server List recycler view initialize
-        if (serverLists != null) {
-            serverListRVAdapter = new ServerListRVAdapter(serverLists, this);
-            serverListRv.setAdapter(serverListRVAdapter);
-        }
-
+        MainFragment.updateActivity(this);
     }
 
-    /**
-     * Initialize all object, listener etc
-     */
-    private void initializeAll() {
+    private void initStart() {
         drawer = findViewById(R.id.drawer_layout);
 
         fragment = new MainFragment();
-        serverListRv = findViewById(R.id.serverListRv);
-        serverListRv.setHasFixedSize(true);
 
-        serverListRv.setLayoutManager(new LinearLayoutManager(this));
-
-        serverLists = getServerList();
-        changeServer = (ChangeServer) fragment;
-
+        setServers(getServerList());
     }
 
-    /**
-     * Close navigation drawer
-     */
-    public void closeDrawer(){
-        if (drawer.isDrawerOpen(GravityCompat.END)) {
-            drawer.closeDrawer(GravityCompat.END);
-        } else {
-            drawer.openDrawer(GravityCompat.END);
-        }
-    }
-
-    /**
-     * Generate server array list
-     */
-    private ArrayList getServerList() {
+    private ArrayList<Server> getServerList() {
 
         ArrayList<Server> servers = new ArrayList<>();
 
         for (String ovpnFileName : ovpnFileNames){
-            servers.add(new Server(
-                    "",
-                    Utils.getImgURL(R.drawable.usa_flag),
-                    dir.toString() + ovpnFileName,
-                    "",
-                    ""));
+            String filePath = dir.toString() + File.separator + ovpnFileName;
+            boolean foundVpnConfigFile = new File(filePath).exists();
+
+            if (foundVpnConfigFile) {
+                servers.add(new Server(
+                        "japan",
+                        Utils.getImgURL(R.drawable.usa_flag),
+                        dir.toString() + File.separator + ovpnFileName,
+                        "",
+                        ""));
+            }
         }
 
         return servers;
-    }
-
-    /**
-     * On navigation item click, close drawer and change server
-     * @param index: server index
-     */
-    @Override
-    public void clickedItem(int index) {
-        closeDrawer();
-        changeServer.newServer(serverLists.get(index));
     }
 }
