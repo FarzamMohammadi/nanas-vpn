@@ -1,6 +1,5 @@
 package com.lazycoder.cakevpn.view;
 
-import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
@@ -10,16 +9,20 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.ImageButton;
+import android.os.Environment;
+import android.provider.Settings;
 
 import com.lazycoder.cakevpn.R;
 import com.lazycoder.cakevpn.adapter.ServerListRVAdapter;
+import com.lazycoder.cakevpn.helpers.downloadManager.DownloadFiles;
 import com.lazycoder.cakevpn.interfaces.ChangeServer;
 import com.lazycoder.cakevpn.interfaces.NavItemClickListener;
 import com.lazycoder.cakevpn.model.Server;
 
+import java.io.File;
 import java.util.ArrayList;
 
 import com.lazycoder.cakevpn.Utils;
@@ -35,32 +38,46 @@ public class MainActivity extends AppCompatActivity implements NavItemClickListe
     private ChangeServer changeServer;
 
     public static final String TAG = "CakeVPN";
+    public static File dir = new File(new File(Environment.getExternalStorageDirectory(), "ovpn-files"), "");
+    String[] ovpnFileNames = {"1.ovpn", "2.ovpn", "3.ovpn", "4.ovpn", "5.ovpn", "6.ovpn", "7.ovpn", "8.ovpn", "9.ovpn", "10.ovpn"};
+
+    public void createDir(){
+        if (!dir.exists()){
+            dir.mkdirs();
+        }
+    }
+
+    private void downloadVpnConfigurationFiles(){
+        new DownloadFiles().execute(ovpnFileNames);
+    }
+
+    public void getPermissions()
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                startActivity(intent);
+                return;
+            }
+            createDir();
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize all variable
+        getPermissions();
+
         initializeAll();
 
-        ImageButton menuRight = findViewById(R.id.navbar_right);
+        downloadVpnConfigurationFiles();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         getSupportActionBar().setDisplayShowTitleEnabled(false);
-
-
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(toggle);
-
-        menuRight.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                closeDrawer();
-            }
-        });
 
         transaction.add(R.id.container, fragment);
         transaction.commit();
@@ -108,30 +125,14 @@ public class MainActivity extends AppCompatActivity implements NavItemClickListe
 
         ArrayList<Server> servers = new ArrayList<>();
 
-        servers.add(new Server("United States",
-                Utils.getImgURL(R.drawable.usa_flag),
-                "us.ovpn",
-                "freeopenvpn",
-                "416248023"
-        ));
-        servers.add(new Server("Japan",
-                Utils.getImgURL(R.drawable.japan),
-                "japan.ovpn",
-                "vpn",
-                "vpn"
-        ));
-        servers.add(new Server("Sweden",
-                Utils.getImgURL(R.drawable.sweden),
-                "sweden.ovpn",
-                "vpn",
-                "vpn"
-        ));
-        servers.add(new Server("Korea",
-                Utils.getImgURL(R.drawable.korea),
-                "korea.ovpn",
-                "vpn",
-                "vpn"
-        ));
+        for (String ovpnFileName : ovpnFileNames){
+            servers.add(new Server(
+                    "",
+                    Utils.getImgURL(R.drawable.usa_flag),
+                    dir.toString() + ovpnFileName,
+                    "",
+                    ""));
+        }
 
         return servers;
     }
