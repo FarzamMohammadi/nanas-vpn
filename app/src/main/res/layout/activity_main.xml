@@ -23,8 +23,6 @@
         android:layout_gravity="end"
         android:fitsSystemWindows="true">
 
-        <include layout="@layout/layout_right_navigation" />
-
     </com.google.android.material.navigation.NavigationView>
 
 </androidx.drawerlayout.widget.DrawerLayout>

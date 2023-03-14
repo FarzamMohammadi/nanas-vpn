@@ -47,7 +47,7 @@ import static android.app.Activity.RESULT_OK;
 
 public class MainFragment extends Fragment implements View.OnClickListener, ChangeServer {
 
-    private Server server;
+    private Server currentServer;
     private ArrayList<Server> servers;
     private CheckInternetConnection connection;
 
@@ -70,6 +70,37 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         mActivityRef = new WeakReference<MainActivity>(activity);
     }
 
+    /**
+     * Receive broadcast message
+     */
+    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                setStatus(intent.getStringExtra("state"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            try {
+
+                String duration = intent.getStringExtra("duration");
+                String lastPacketReceive = intent.getStringExtra("lastPacketReceive");
+                String byteIn = intent.getStringExtra("byteIn");
+                String byteOut = intent.getStringExtra("byteOut");
+
+                if (duration == null) duration = "00:00:00";
+                if (lastPacketReceive == null) lastPacketReceive = "0";
+                if (byteIn == null) byteIn = " ";
+                if (byteOut == null) byteOut = " ";
+                updateConnectionStatus(duration, lastPacketReceive, byteIn, byteOut);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }
+    };
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = DataBindingUtil.inflate(inflater, R.layout.fragment_main, container, false);
@@ -85,9 +116,11 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
      */
     private void initializeAll() {
         preference = new SharedPreference(getContext());
+
         MainActivity mainAcitivity = mActivityRef.get();
+
         servers = mainAcitivity.getServers();
-        server = servers.get(0);
+        currentServer = servers.get(0);
 
         connection = new CheckInternetConnection();
     }
@@ -136,7 +169,6 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
                 // User cancelled the dialog
             }
         });
-
         // Create the AlertDialog
         AlertDialog dialog = builder.create();
         dialog.show();
@@ -224,7 +256,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
      */
     private void startVpn() {
         try {
-            File ovpnFile = new File(server.getOvpn());
+            File ovpnFile = new File(currentServer.getOvpn());
             BufferedReader br = new BufferedReader(new FileReader(ovpnFile));
             String config = "";
             String line;
@@ -236,7 +268,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
             }
 
             br.readLine();
-            OpenVpnApi.startVpn(getContext(), config, server.getCountry(), server.getOvpnUserName(), server.getOvpnUserPassword());
+            OpenVpnApi.startVpn(getContext(), config, currentServer.getCountry(), currentServer.getOvpnUserName(), currentServer.getOvpnUserPassword());
 
             // Update log
             binding.logTv.setText("Connecting...");
@@ -247,6 +279,11 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         }
     }
 
+    @Override
+    public void onPause() {
+        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(broadcastReceiver);
+        super.onPause();
+    }
     /**
      * Status change with corresponding vpn connection status
      * @param connectionState
@@ -258,25 +295,25 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
                     status("connect");
                     vpnStart = false;
                     vpnService.setDefaultStatus();
-                    binding.logTv.setText("");
+                    binding.logTv.setText(disconnected);
                     break;
                 case "CONNECTED":
                     vpnStart = true;// it will use after restart this activity
                     status("connected");
-                    binding.logTv.setText("");
+                    binding.logTv.setText(connected);
                     break;
                 case "WAIT":
-                    binding.logTv.setText("waiting for server connection!!");
+                    binding.logTv.setText(connecting);
                     break;
                 case "AUTH":
-                    binding.logTv.setText("server authenticating!!");
+                    binding.logTv.setText(connecting);
                     break;
                 case "RECONNECTING":
                     status("connecting");
-                    binding.logTv.setText("Reconnecting...");
+                    binding.logTv.setText(connecting);
                     break;
                 case "NONETWORK":
-                    binding.logTv.setText("No network connection");
+                    binding.logTv.setText(noInternetConnection);
                     break;
             }
         }
@@ -322,10 +359,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
      * @param byteOut: outgoing data
      */
     public void updateConnectionStatus(String duration, String lastPacketReceive, String byteIn, String byteOut) {
-        binding.durationTv.setText("Duration: " + duration);
-        binding.lastPacketReceiveTv.setText("Packet Received: " + lastPacketReceive + " second ago");
-        binding.byteInTv.setText("Bytes In: " + byteIn);
-        binding.byteOutTv.setText("Bytes Out: " + byteOut);
+       //
     }
 
     /**
@@ -342,7 +376,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
      */
     @Override
     public void newServer(Server server) {
-        this.server = server;
+        this.currentServer = server;
 
         // Stop previous connection
         if (vpnStart) {
@@ -354,8 +388,10 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
 
     @Override
     public void onResume() {
-        if (server == null) {
-            server = preference.getServer();
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(broadcastReceiver, new IntentFilter("connectionState"));
+
+        if (currentServer == null) {
+            currentServer = preference.getServer();
         }
         super.onResume();
     }
@@ -365,8 +401,8 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
      */
     @Override
     public void onStop() {
-        if (server != null) {
-            preference.saveServer(server);
+        if (currentServer != null) {
+            preference.saveServer(currentServer);
         }
 
         super.onStop();

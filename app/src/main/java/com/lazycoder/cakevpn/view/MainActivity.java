@@ -2,11 +2,9 @@ package com.lazycoder.cakevpn.view;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
@@ -16,10 +14,8 @@ import android.os.Environment;
 import android.provider.Settings;
 
 import com.lazycoder.cakevpn.R;
-import com.lazycoder.cakevpn.adapter.ServerListRVAdapter;
 import com.lazycoder.cakevpn.helpers.downloadManager.DownloadFiles;
 import com.lazycoder.cakevpn.interfaces.ChangeServer;
-import com.lazycoder.cakevpn.interfaces.NavItemClickListener;
 import com.lazycoder.cakevpn.model.Server;
 
 import java.io.File;
@@ -31,12 +27,6 @@ import com.lazycoder.cakevpn.Utils;
 public class MainActivity extends AppCompatActivity {
     private FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
     private Fragment fragment;
-    private RecyclerView serverListRv;
-    private ServerListRVAdapter serverListRVAdapter;
-    private DrawerLayout drawer;
-    private ChangeServer changeServer;
-
-    public static final String TAG = "CakeVPN";
     public static File dir = new File(new File(Environment.getExternalStorageDirectory(), "ovpn-files"), "");
     String[] ovpnFileNames = {"1.ovpn", "2.ovpn"};
 
@@ -93,8 +83,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initStart() {
-        drawer = findViewById(R.id.drawer_layout);
-
         fragment = new MainFragment();
 
         setServers(getServerList());
