@@ -36,7 +36,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.ref.WeakReference;
+import java.text.SimpleDateFormat;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 
 import de.blinkt.openvpn.OpenVpnApi;
 import de.blinkt.openvpn.core.OpenVPNService;
@@ -81,23 +85,6 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
-            try {
-
-                String duration = intent.getStringExtra("duration");
-                String lastPacketReceive = intent.getStringExtra("lastPacketReceive");
-                String byteIn = intent.getStringExtra("byteIn");
-                String byteOut = intent.getStringExtra("byteOut");
-
-                if (duration == null) duration = "00:00:00";
-                if (lastPacketReceive == null) lastPacketReceive = "0";
-                if (byteIn == null) byteIn = " ";
-                if (byteOut == null) byteOut = " ";
-                updateConnectionStatus(duration, lastPacketReceive, byteIn, byteOut);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
         }
     };
 
@@ -130,6 +117,25 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         super.onViewCreated(view, savedInstanceState);
 
         binding.vpnBtn.setOnClickListener(this);
+
+        try{
+            Calendar calendar = Calendar.getInstance();
+            SimpleDateFormat sdf = new SimpleDateFormat("HH");
+            int currentHour = Integer.parseInt(sdf.format(calendar.getTime())); //24hr format
+
+            if (currentHour >= 3 && currentHour <= 12){
+                binding.logTv.setText("Good Morning!");
+            }
+            else if (currentHour >= 12 && currentHour <= 18){
+                binding.logTv.setText("Good Afternoon!");
+            }
+            else {
+                binding.logTv.setText("Good Evening");
+            }
+        }
+        catch (Exception e){
+            binding.logTv.setText("Hi Grandmaaa!! :)");
+        }
 
         // Checking is vpn already running or not
         isServiceRunning();
@@ -188,18 +194,13 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
                     startActivityForResult(intent, 1);
                 } else startVpn();
 
-                // Update confection status
                 status("connecting");
             } else {
-
-                // No internet connection available
-                showToast("you have no internet connection !!");
+                showToast(noInternetConnection);
             }
 
         } else if (stopVpn()) {
-
-            // VPN is stopped, show a Toast message.
-            showToast("Disconnect Successfully");
+            showToast(disconnected);
         }
     }
 
@@ -271,7 +272,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
             OpenVpnApi.startVpn(getContext(), config, currentServer.getCountry(), currentServer.getOvpnUserName(), currentServer.getOvpnUserPassword());
 
             // Update log
-            binding.logTv.setText("Connecting...");
+            binding.logTv.setText(connecting);
             vpnStart = true;
 
         } catch (IOException | RemoteException e) {
@@ -349,17 +350,6 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
             binding.vpnBtn.setText(connecting);
         }
 
-    }
-
-    /**
-     * Update status UI
-     * @param duration: running time
-     * @param lastPacketReceive: last packet receive time
-     * @param byteIn: incoming data
-     * @param byteOut: outgoing data
-     */
-    public void updateConnectionStatus(String duration, String lastPacketReceive, String byteIn, String byteOut) {
-       //
     }
 
     /**
