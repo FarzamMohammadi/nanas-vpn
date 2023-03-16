@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.net.VpnService;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -57,7 +58,8 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
 
     private OpenVPNThread vpnThread = new OpenVPNThread();
     private OpenVPNService vpnService = new OpenVPNService();
-    boolean vpnStart = false;
+    boolean vpnStarted = false;
+    int numberOfConnectionRetries = 0;
     private SharedPreference preference;
 
     private FragmentMainBinding binding;
@@ -68,6 +70,11 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     String disconnect = "مادرجانم ین دکمه رو بزن که قطع بشه";
     String disconnected = "مادرجانم قطع شد";
     String noInternetConnection = "مادرجانم اینترنت قته، لطفآ به ون وسل شو";
+    String unableToConnectToAnyServer = "";
+    String defaultGreeting = "سلام مادر جون";
+    String morningGreeting = "صبحت بخیر مادر جون";
+    String afternoonGreeting = "عصرت بخیر مادر جون";
+    String eveningGreeting = "عصرت بخیر مادر جون";
 
     private static WeakReference<MainActivity> mActivityRef;
     public static void updateActivity(MainActivity activity) {
@@ -121,20 +128,21 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         try{
             Calendar calendar = Calendar.getInstance();
             SimpleDateFormat sdf = new SimpleDateFormat("HH");
+
             int currentHour = Integer.parseInt(sdf.format(calendar.getTime())); //24hr format
 
             if (currentHour >= 3 && currentHour <= 12){
-                binding.logTv.setText("Good Morning!");
+                binding.logTv.setText(morningGreeting);
             }
             else if (currentHour >= 12 && currentHour <= 18){
-                binding.logTv.setText("Good Afternoon!");
+                binding.logTv.setText(afternoonGreeting);
             }
             else {
-                binding.logTv.setText("Good Evening");
+                binding.logTv.setText(eveningGreeting);
             }
         }
         catch (Exception e){
-            binding.logTv.setText("Hi Grandmaaa!! :)");
+            binding.logTv.setText(defaultGreeting);
         }
 
         // Checking is vpn already running or not
@@ -149,42 +157,15 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.vpnBtn:
-                // Vpn is running, user would like to disconnect current connection.
-                if (vpnStart) {
-                    confirmDisconnect();
-                }else {
-                    prepareVpn();
-                }
+                prepareVpn();
         }
-    }
-
-    /**
-     * Show show disconnect confirm dialog
-     */
-    public void confirmDisconnect(){
-        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-        builder.setMessage(getActivity().getString(R.string.connection_close_confirm));
-
-        builder.setPositiveButton(getActivity().getString(R.string.yes), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                stopVpn();
-            }
-        });
-        builder.setNegativeButton(getActivity().getString(R.string.no), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                // User cancelled the dialog
-            }
-        });
-        // Create the AlertDialog
-        AlertDialog dialog = builder.create();
-        dialog.show();
     }
 
     /**
      * Prepare for vpn connect with required permission
      */
     private void prepareVpn() {
-        if (!vpnStart) {
+        if (!vpnStarted) {
             if (getInternetStatus()) {
 
                 // Checking permission for network monitor
@@ -213,7 +194,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
             vpnThread.stop();
 
             status("connect");
-            vpnStart = false;
+            vpnStarted = false;
             return true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -256,6 +237,8 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
      * Start the VPN
      */
     private void startVpn() {
+        numberOfConnectionRetries = 0;
+
         try {
             File ovpnFile = new File(currentServer.getOvpn());
             BufferedReader br = new BufferedReader(new FileReader(ovpnFile));
@@ -271,9 +254,12 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
             br.readLine();
             OpenVpnApi.startVpn(getContext(), config, currentServer.getCountry(), currentServer.getOvpnUserName(), currentServer.getOvpnUserPassword());
 
+            String newConnectionAttemptMsg = "Now Connecting to" + currentServer.getOvpn();
+            Log.i("New Server", newConnectionAttemptMsg);
+
             // Update log
             binding.logTv.setText(connecting);
-            vpnStart = true;
+            vpnStarted = true;
 
         } catch (IOException | RemoteException e) {
             e.printStackTrace();
@@ -294,12 +280,12 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
             switch (connectionState) {
                 case "DISCONNECTED":
                     status("connect");
-                    vpnStart = false;
+                    vpnStarted = false;
                     vpnService.setDefaultStatus();
                     binding.logTv.setText(disconnected);
                     break;
                 case "CONNECTED":
-                    vpnStart = true;// it will use after restart this activity
+                    vpnStarted = true;// it will use after restart this activity
                     status("connected");
                     binding.logTv.setText(connected);
                     break;
@@ -310,6 +296,13 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
                     binding.logTv.setText(connecting);
                     break;
                 case "RECONNECTING":
+                    if (numberOfConnectionRetries >= 1){
+                        useNextAvailableVpn();
+                        return;
+                    }
+
+                    numberOfConnectionRetries+=1;
+
                     status("connecting");
                     binding.logTv.setText(connecting);
                     break;
@@ -349,7 +342,28 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
             binding.vpnBtn.setBackgroundResource(R.drawable.button_connecting);
             binding.vpnBtn.setText(connecting);
         }
+    }
 
+    private void resetServerBackToFirstInTheList(){
+        Server firstServerInTheList = servers.get(0);
+
+        currentServer = firstServerInTheList;
+
+        stopVpn();
+    }
+
+    private void useNextAvailableVpn(){
+        int currentServerIndex = servers.indexOf(currentServer);
+
+        if (currentServerIndex + 1 == servers.size()){
+            resetServerBackToFirstInTheList();
+
+            binding.logTv.setText(unableToConnectToAnyServer);
+        }
+
+        Server nextAvailableServer = servers.get(currentServerIndex+1);
+
+        newServer(nextAvailableServer);
     }
 
     /**
@@ -369,7 +383,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         this.currentServer = server;
 
         // Stop previous connection
-        if (vpnStart) {
+        if (vpnStarted) {
             stopVpn();
         }
 

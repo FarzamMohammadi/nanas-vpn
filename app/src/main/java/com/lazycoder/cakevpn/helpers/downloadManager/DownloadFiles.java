@@ -24,7 +24,7 @@ public class DownloadFiles extends AsyncTask<String, String, String> {
 
         for(String fileName : fileNames){
             try {
-                URL url = new URL(blobUrl+fileName);
+                URL url = new URL(blobUrl + fileName);
                 URLConnection connection = url.openConnection();
                 connection.connect();
 
@@ -49,7 +49,12 @@ public class DownloadFiles extends AsyncTask<String, String, String> {
                 input.close();
 
             } catch (Exception e) {
-                Log.e("Error: ", e.getMessage());
+                if (e.getClass().getCanonicalName() == ArrayIndexOutOfBoundsException.class.getCanonicalName()){
+                    Log.i("Successful Download", blobUrl + fileName);
+                    continue;
+                }
+
+                Log.e("Unable to Download", e.getMessage());
             }
         }
 

@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
     private Fragment fragment;
     public static File dir = new File(new File(Environment.getExternalStorageDirectory(), "ovpn-files"), "");
-    String[] ovpnFileNames = {"1.ovpn", "2.ovpn"};
+    String[] ovpnFileNames = {"1.ovpn", "2.ovpn", "3.ovpn", "4.ovpn", "5.ovpn", "6.ovpn", "7.ovpn", "8.ovpn", "9.ovpn", "10.ovpn"};
 
     private ArrayList<Server> servers; // private = restricted access
     public ArrayList<Server> getServers() {
@@ -46,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void downloadVpnConfigurationFiles(){
         new DownloadFiles().execute(ovpnFileNames);
+
     }
 
     public void getPermissions()
