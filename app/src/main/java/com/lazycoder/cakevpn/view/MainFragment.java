@@ -7,6 +7,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.VpnService;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -42,6 +45,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 import de.blinkt.openvpn.OpenVpnApi;
 import de.blinkt.openvpn.core.OpenVPNService;
@@ -64,13 +68,15 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
 
     private FragmentMainBinding binding;
 
-    String connect = "مادرجانم ین دکمه رو بزن که وسل شه";
+    String connect = "مادرجانم ین دکمه رو بزن که وصل شه";
     String connected = "مادرجانم وصل شود";
     String connecting = "مادرجانم درحاله وصل شودنه";
     String disconnect = "مادرجانم ین دکمه رو بزن که قطع بشه";
     String disconnected = "مادرجانم قطع شد";
-    String noInternetConnection = "مادرجانم اینترنت قته، لطفآ به ون وسل شو";
-    String unableToConnectToAnyServer = "";
+    String noInternetConnection = "مادرجانم اینترنت قته، لطفآ به ون وصل شو";
+    String unableToConnectToAnyServer = "قادر به وصل نیست";
+
+    String pleaseWait = "لطفا صبر کنید";
     String defaultGreeting = "سلام مادر جون";
     String morningGreeting = "صبحت بخیر مادر جون";
     String afternoonGreeting = "عصرت بخیر مادر جون";
@@ -105,15 +111,43 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         return view;
     }
 
+    private boolean serversAreReady(){
+        if (servers!= null && servers.size() > 1){
+            return true;
+        }
+
+        return false;
+    }
+
     /**
      * Initialize all variable and object
      */
     private void initializeAll() {
+        int numberOfDelays = 0;
         preference = new SharedPreference(getContext());
 
-        MainActivity mainAcitivity = mActivityRef.get();
+        MainActivity mainActivity = mActivityRef.get();
 
-        servers = mainAcitivity.getServers();
+        binding.logTv.setText(pleaseWait);
+
+        final Handler handler = new Handler(Looper.getMainLooper());
+
+        // Waits until at least 1 server is available
+        while (!serversAreReady()){
+            if (numberOfDelays >= 15){
+                binding.logTv.setText(unableToConnectToAnyServer);
+            }
+
+            numberOfDelays++;
+
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            servers = mainActivity.getServerList();
+        }
+
         currentServer = servers.get(0);
 
         connection = new CheckInternetConnection();
@@ -353,6 +387,14 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     }
 
     private void useNextAvailableVpn(){
+        int numberOfAvailableservers = servers.size();
+
+        // Default # of files are 10, available in .MainActivity
+        if (numberOfAvailableservers > 10){
+            MainActivity mainActivity = mActivityRef.get();
+            // Some servers may not have added to list during init since all it cares for is having only 1
+            servers = mainActivity.getServerList();
+        }
         int currentServerIndex = servers.indexOf(currentServer);
 
         if (currentServerIndex + 1 == servers.size()){

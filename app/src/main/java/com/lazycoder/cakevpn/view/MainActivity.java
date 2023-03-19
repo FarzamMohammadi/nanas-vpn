@@ -11,8 +11,10 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.StrictMode;
 import android.provider.Settings;
 
+import com.lazycoder.cakevpn.BuildConfig;
 import com.lazycoder.cakevpn.R;
 import com.lazycoder.cakevpn.helpers.downloadManager.DownloadFiles;
 import com.lazycoder.cakevpn.interfaces.ChangeServer;
@@ -20,6 +22,8 @@ import com.lazycoder.cakevpn.model.Server;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.logging.Handler;
 
 import com.lazycoder.cakevpn.Utils;
 
@@ -46,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void downloadVpnConfigurationFiles(){
         new DownloadFiles().execute(ovpnFileNames);
-
     }
 
     public void getPermissions()
@@ -57,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
                 return;
             }
-            createDir();
         }
     }
 
@@ -68,6 +70,9 @@ public class MainActivity extends AppCompatActivity {
 
         getPermissions();
 
+        //Assumes has permissions
+        //TODO: run after making sure permissions are set
+        createDir();
         downloadVpnConfigurationFiles();
 
         initStart();
@@ -89,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
         setServers(getServerList());
     }
 
-    private ArrayList<Server> getServerList() {
+    public ArrayList<Server> getServerList() {
 
         ArrayList<Server> servers = new ArrayList<>();
 

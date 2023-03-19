@@ -10,14 +10,13 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Properties;
 
 public class DownloadFiles extends AsyncTask<String, String, String> {
-    private String blobUrl = "";
+    private String blobUrl = "https://nanasvpn.blob.core.windows.net/vpn-configs/";
 
     /**
      * Downloading file in background thread
-     * */
+     */
     @Override
     protected String doInBackground(String[] fileNames) {
         int count;
@@ -58,7 +57,7 @@ public class DownloadFiles extends AsyncTask<String, String, String> {
             }
         }
 
-        return null;
+        return "Complete";
     }
 
 }
