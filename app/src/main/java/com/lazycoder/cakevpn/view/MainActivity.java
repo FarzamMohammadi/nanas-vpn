@@ -8,6 +8,7 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -34,46 +35,20 @@ public class MainActivity extends AppCompatActivity {
     public static File dir = new File(new File(Environment.getExternalStorageDirectory(), "ovpn-files"), "");
     String[] ovpnFileNames = {"1.ovpn", "2.ovpn", "3.ovpn", "4.ovpn", "5.ovpn", "6.ovpn", "7.ovpn", "8.ovpn", "9.ovpn", "10.ovpn"};
 
-    private ArrayList<Server> servers; // private = restricted access
-    public ArrayList<Server> getServers() {
-        return servers;
-    }
-    public void setServers(ArrayList<Server> servers) {
-        this.servers = servers;
-    }
-
     public void createDir(){
         if (!dir.exists()){
             dir.mkdirs();
         }
     }
 
-    private void downloadVpnConfigurationFiles(){
+    public void downloadVpnConfigurationFiles(){
         new DownloadFiles().execute(ovpnFileNames);
-    }
-
-    public void getPermissions()
-    {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                startActivity(intent);
-                return;
-            }
-        }
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        getPermissions();
-
-        //Assumes has permissions
-        //TODO: run after making sure permissions are set
-        createDir();
-        downloadVpnConfigurationFiles();
 
         initStart();
 
@@ -88,10 +63,56 @@ public class MainActivity extends AppCompatActivity {
         MainFragment.updateActivity(this);
     }
 
+    private boolean haveRequiredPermissions()
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void showAppPermissionsSettings(){
+        Uri uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID);
+
+        Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri);
+
+
+        startActivityForResult(intent, 777);
+    }
+
+    private void createDirectoryAndDownloadVpnFiles(){
+        MainActivity mainActivity = new MainActivity();
+        mainActivity.createDir();
+        mainActivity.downloadVpnConfigurationFiles();
+    }
+
     private void initStart() {
         fragment = new MainFragment();
 
-        setServers(getServerList());
+        if (!haveRequiredPermissions()){
+            showAppPermissionsSettings();
+        } else{
+            createDirectoryAndDownloadVpnFiles();
+        }
+    }
+
+    /**
+     * Taking permission for network access
+     */
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 777){
+            // Has to be repeated since this code is
+            if (!haveRequiredPermissions()){
+                showAppPermissionsSettings();
+            } else{
+                createDirectoryAndDownloadVpnFiles();
+            }
+        }
+
     }
 
     public ArrayList<Server> getServerList() {
