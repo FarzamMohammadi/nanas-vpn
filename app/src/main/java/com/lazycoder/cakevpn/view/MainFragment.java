@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.net.VpnService;
 import android.os.Bundle;
 import android.os.Handler;
@@ -112,7 +114,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     }
 
     private boolean serversAreReady(){
-        if (servers!= null && servers.size() > 1){
+        if (servers != null && servers.size() >= 1){
             return true;
         }
 
@@ -300,6 +302,21 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         }
     }
 
+    private void openWhatsApp(){
+        String contact = "+91 9999999999"; // use country code with your phone number
+        String url = "https://api.whatsapp.com/send?phone=" + contact;
+        try {
+            PackageManager pm = this.getContext().getPackageManager();
+            pm.getPackageInfo("com.whatsapp", PackageManager.GET_ACTIVITIES);
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setData(Uri.parse(url));
+            this.getContext().startActivity(i);
+        } catch (PackageManager.NameNotFoundException e) {
+            Toast.makeText(this.getContext(), "Whatsapp app not installed on your phone",Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void onPause() {
         LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(broadcastReceiver);
@@ -322,6 +339,9 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
                     vpnStarted = true;// it will use after restart this activity
                     status("connected");
                     binding.logTv.setText(connected);
+
+                    openWhatsApp();
+
                     break;
                 case "WAIT":
                     binding.logTv.setText(connecting);
@@ -395,6 +415,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
             // Some servers may not have added to list during init since all it cares for is having only 1
             servers = mainActivity.getServerList();
         }
+
         int currentServerIndex = servers.indexOf(currentServer);
 
         if (currentServerIndex + 1 == servers.size()){
