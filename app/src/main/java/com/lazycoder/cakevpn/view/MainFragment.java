@@ -70,19 +70,19 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
 
     private FragmentMainBinding binding;
 
-    String connect = "مادرجانم ین دکمه رو بزن که وصل شه";
-    String connected = "مادرجانم وصل شود";
-    String connecting = "مادرجانم درحاله وصل شودنه";
-    String disconnect = "مادرجانم ین دکمه رو بزن که قطع بشه";
-    String disconnected = "مادرجانم قطع شد";
-    String noInternetConnection = "مادرجانم اینترنت قته، لطفآ به ون وصل شو";
-    String unableToConnectToAnyServer = "قادر به وصل نیست";
+    String connect = "این دکمه رو بزن که وصل شه";
+    String connected = "مادرجانم\nوصل شد";
+    String connecting = "درحال وصل شدنه";
+    String disconnect = "این دکمه رو بزن که قطع بشه";
+    String disconnected = "مادرجانم\nقطع شد";
+    String noInternetConnection = "مادرجانم اینترنت قطعه، لطفآ وصل شو";
+    String unableToConnectToAnyServer = "قادر به وصل شدن نیست";
 
-    String pleaseWait = "لطفا صبر کنید";
-    String defaultGreeting = "سلام مادر جون";
-    String morningGreeting = "صبحت بخیر مادر جون";
-    String afternoonGreeting = "عصرت بخیر مادر جون";
-    String eveningGreeting = "عصرت بخیر مادر جون";
+    String pleaseWait = "لطفا صبر کن";
+    String defaultGreeting = "مادر جون\nسلام";
+    String morningGreeting = "مادر جون\nصبحت بخیر";
+    String afternoonGreeting = "مادر جون\nعصرت بخیر";
+    String eveningGreeting = "مادر جون\nعصرت بخیر";
 
     private static WeakReference<MainActivity> mActivityRef;
     public static void updateActivity(MainActivity activity) {
@@ -106,8 +106,8 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = DataBindingUtil.inflate(inflater, R.layout.fragment_main, container, false);
-
         View view = binding.getRoot();
+
         initializeAll();
 
         return view;
@@ -131,8 +131,6 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
         MainActivity mainActivity = mActivityRef.get();
 
         binding.logTv.setText(pleaseWait);
-
-        final Handler handler = new Handler(Looper.getMainLooper());
 
         // Waits until at least 1 server is available
         while (!serversAreReady()){
@@ -303,7 +301,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
     }
 
     private void openWhatsApp(){
-        String contact = "+91 9999999999"; // use country code with your phone number
+        String contact = "+1 9999999999"; // use country code with your phone number
         String url = "https://api.whatsapp.com/send?phone=" + contact;
         try {
             PackageManager pm = this.getContext().getPackageManager();
@@ -400,10 +398,11 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
 
     private void resetServerBackToFirstInTheList(){
         Server firstServerInTheList = servers.get(0);
-
         currentServer = firstServerInTheList;
 
         stopVpn();
+
+        binding.vpnBtn.setText(unableToConnectToAnyServer);
     }
 
     private void useNextAvailableVpn(){
@@ -418,10 +417,11 @@ public class MainFragment extends Fragment implements View.OnClickListener, Chan
 
         int currentServerIndex = servers.indexOf(currentServer);
 
-        if (currentServerIndex + 1 == servers.size()){
+        if (currentServerIndex + 1 >= servers.size()){
             resetServerBackToFirstInTheList();
 
             binding.logTv.setText(unableToConnectToAnyServer);
+            return;
         }
 
         Server nextAvailableServer = servers.get(currentServerIndex+1);

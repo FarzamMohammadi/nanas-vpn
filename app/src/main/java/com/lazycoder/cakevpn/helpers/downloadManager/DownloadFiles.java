@@ -12,7 +12,7 @@ import java.net.URL;
 import java.net.URLConnection;
 
 public class DownloadFiles extends AsyncTask<String, String, String> {
-    private String blobUrl = "https://nanasvpn.blob.core.windows.net/vpn-configs/";
+    private String blobUrl = "";
 
     /**
      * Downloading file in background thread
